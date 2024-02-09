@@ -1,4 +1,5 @@
 import { DEFAULT_AGENT_META } from '@/const/meta';
+import { LanguageModel } from '@/types/llm';
 import { ModelProvider } from '@/libs/agent-runtime';
 import { LobeAgentConfig, LobeAgentTTSConfig } from '@/types/agent';
 import {
