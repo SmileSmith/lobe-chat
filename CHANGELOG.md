@@ -2,6 +2,331 @@
 
 # Changelog
 
+### [Version 0.126.1](https://github.com/lobehub/lobe-chat/compare/v0.126.0...v0.126.1)
+
+<sup>Released on **2024-02-09**</sup>
+
+#### 🐛 Bug Fixes
+
+- **misc**: Add basePath to support subdirectory.
+
+<br/>
+
+<details>
+<summary><kbd>Improvements and Fixes</kbd></summary>
+
+#### What's fixed
+
+- **misc**: Add basePath to support subdirectory, closes [#1179](https://github.com/lobehub/lobe-chat/issues/1179) ([43e544a](https://github.com/lobehub/lobe-chat/commit/43e544a))
+
+</details>
+
+<div align="right">
+
+[![](https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square)](#readme-top)
+
+</div>
+
+## [Version 0.126.0](https://github.com/lobehub/lobe-chat/compare/v0.125.0...v0.126.0)
+
+<sup>Released on **2024-02-09**</sup>
+
+#### ✨ Features
+
+- **misc**: Support umami analytics.
+
+#### 🐛 Bug Fixes
+
+- **misc**: The back button on the chat setting page can correctly return to the configured Agent chat page.
+
+<br/>
+
+<details>
+<summary><kbd>Improvements and Fixes</kbd></summary>
+
+#### What's improved
+
+- **misc**: Support umami analytics, closes [#1267](https://github.com/lobehub/lobe-chat/issues/1267) ([da7beba](https://github.com/lobehub/lobe-chat/commit/da7beba))
+
+#### What's fixed
+
+- **misc**: The back button on the chat setting page can correctly return to the configured Agent chat page, closes [#1272](https://github.com/lobehub/lobe-chat/issues/1272) ([4cc1ad5](https://github.com/lobehub/lobe-chat/commit/4cc1ad5))
+
+</details>
+
+<div align="right">
+
+[![](https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square)](#readme-top)
+
+</div>
+
+## [Version 0.125.0](https://github.com/lobehub/lobe-chat/compare/v0.124.3...v0.125.0)
+
+<sup>Released on **2024-02-08**</sup>
+
+#### ✨ Features
+
+- **misc**: Support login & session authentication via OAuth 2.0 (Auth0).
+
+<br/>
+
+<details>
+<summary><kbd>Improvements and Fixes</kbd></summary>
+
+#### What's improved
+
+- **misc**: Support login & session authentication via OAuth 2.0 (Auth0), closes [#1143](https://github.com/lobehub/lobe-chat/issues/1143) ([0609690](https://github.com/lobehub/lobe-chat/commit/0609690))
+
+</details>
+
+<div align="right">
+
+[![](https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square)](#readme-top)
+
+</div>
+
+### [Version 0.124.3](https://github.com/lobehub/lobe-chat/compare/v0.124.2...v0.124.3)
+
+<sup>Released on **2024-02-07**</sup>
+
+#### 🐛 Bug Fixes
+
+- **misc**: Fix use azure api key error.
+
+#### 💄 Styles
+
+- **settings**: Improve LLM connection checker style.
+
+<br/>
+
+<details>
+<summary><kbd>Improvements and Fixes</kbd></summary>
+
+#### What's fixed
+
+- **misc**: Fix use azure api key error, closes [#1263](https://github.com/lobehub/lobe-chat/issues/1263) ([4e08f63](https://github.com/lobehub/lobe-chat/commit/4e08f63))
+
+#### Styles
+
+- **settings**: Improve LLM connection checker style, closes [#1252](https://github.com/lobehub/lobe-chat/issues/1252) ([4905d9e](https://github.com/lobehub/lobe-chat/commit/4905d9e))
+
+</details>
+
+<div align="right">
+
+[![](https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square)](#readme-top)
+
+</div>
+
+### [Version 0.124.2](https://github.com/lobehub/lobe-chat/compare/v0.124.1...v0.124.2)
+
+<sup>Released on **2024-02-06**</sup>
+
+#### 💄 Styles
+
+- **misc**: Add moonshot i18n.
+
+<br/>
+
+<details>
+<summary><kbd>Improvements and Fixes</kbd></summary>
+
+#### Styles
+
+- **misc**: Add moonshot i18n, closes [#1251](https://github.com/lobehub/lobe-chat/issues/1251) ([4b6663b](https://github.com/lobehub/lobe-chat/commit/4b6663b))
+
+</details>
+
+<div align="right">
+
+[![](https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square)](#readme-top)
+
+</div>
+
+### [Version 0.124.1](https://github.com/lobehub/lobe-chat/compare/v0.124.0...v0.124.1)
+
+<sup>Released on **2024-02-06**</sup>
+
+#### 💄 Styles
+
+- **misc**: Improve direction UX.
+
+<br/>
+
+<details>
+<summary><kbd>Improvements and Fixes</kbd></summary>
+
+#### Styles
+
+- **misc**: Improve direction UX, closes [#1169](https://github.com/lobehub/lobe-chat/issues/1169) ([e3929dc](https://github.com/lobehub/lobe-chat/commit/e3929dc))
+
+</details>
+
+<div align="right">
+
+[![](https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square)](#readme-top)
+
+</div>
+
+## [Version 0.124.0](https://github.com/lobehub/lobe-chat/compare/v0.123.4...v0.124.0)
+
+<sup>Released on **2024-02-06**</sup>
+
+#### ✨ Features
+
+- **misc**: Support Moonshot AI Provider.
+
+<br/>
+
+<details>
+<summary><kbd>Improvements and Fixes</kbd></summary>
+
+#### What's improved
+
+- **misc**: Support Moonshot AI Provider, closes [#1232](https://github.com/lobehub/lobe-chat/issues/1232) ([a6de202](https://github.com/lobehub/lobe-chat/commit/a6de202))
+
+</details>
+
+<div align="right">
+
+[![](https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square)](#readme-top)
+
+</div>
+
+### [Version 0.123.4](https://github.com/lobehub/lobe-chat/compare/v0.123.3...v0.123.4)
+
+<sup>Released on **2024-02-06**</sup>
+
+#### 💄 Styles
+
+- **misc**: Improve clear topic tips.
+
+<br/>
+
+<details>
+<summary><kbd>Improvements and Fixes</kbd></summary>
+
+#### Styles
+
+- **misc**: Improve clear topic tips, closes [#1247](https://github.com/lobehub/lobe-chat/issues/1247) ([2d133e9](https://github.com/lobehub/lobe-chat/commit/2d133e9))
+
+</details>
+
+<div align="right">
+
+[![](https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square)](#readme-top)
+
+</div>
+
+### [Version 0.123.3](https://github.com/lobehub/lobe-chat/compare/v0.123.2...v0.123.3)
+
+<sup>Released on **2024-02-06**</sup>
+
+#### 🐛 Bug Fixes
+
+- **misc**: Fix non-https `crypto.subtile` missing error.
+
+<br/>
+
+<details>
+<summary><kbd>Improvements and Fixes</kbd></summary>
+
+#### What's fixed
+
+- **misc**: Fix non-https `crypto.subtile` missing error, closes [#1238](https://github.com/lobehub/lobe-chat/issues/1238) ([1750d0b](https://github.com/lobehub/lobe-chat/commit/1750d0b))
+
+</details>
+
+<div align="right">
+
+[![](https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square)](#readme-top)
+
+</div>
+
+### [Version 0.123.2](https://github.com/lobehub/lobe-chat/compare/v0.123.1...v0.123.2)
+
+<sup>Released on **2024-02-06**</sup>
+
+#### 🐛 Bug Fixes
+
+- **misc**: Fix docker build.
+
+<br/>
+
+<details>
+<summary><kbd>Improvements and Fixes</kbd></summary>
+
+#### What's fixed
+
+- **misc**: Fix docker build, closes [#1231](https://github.com/lobehub/lobe-chat/issues/1231) ([e180722](https://github.com/lobehub/lobe-chat/commit/e180722))
+
+</details>
+
+<div align="right">
+
+[![](https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square)](#readme-top)
+
+</div>
+
+### [Version 0.123.1](https://github.com/lobehub/lobe-chat/compare/v0.123.0...v0.123.1)
+
+<sup>Released on **2024-02-05**</sup>
+
+#### 🐛 Bug Fixes
+
+- **misc**: Improve auth control of plugin gateways, update dockerfile.
+
+#### 💄 Styles
+
+- **misc**: Add gpt-4-all feature flag.
+
+<br/>
+
+<details>
+<summary><kbd>Improvements and Fixes</kbd></summary>
+
+#### What's fixed
+
+- **misc**: Improve auth control of plugin gateways ([6354ad8](https://github.com/lobehub/lobe-chat/commit/6354ad8))
+- **misc**: Update dockerfile ([e66aed3](https://github.com/lobehub/lobe-chat/commit/e66aed3))
+
+#### Styles
+
+- **misc**: Add gpt-4-all feature flag ([360b36c](https://github.com/lobehub/lobe-chat/commit/360b36c))
+
+</details>
+
+<div align="right">
+
+[![](https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square)](#readme-top)
+
+</div>
+
+## [Version 0.123.0](https://github.com/lobehub/lobe-chat/compare/v0.122.9...v0.123.0)
+
+<sup>Released on **2024-02-05**</sup>
+
+#### ✨ Features
+
+- **misc**: Support Google / Zhipu / AWS Bedrock model providers.
+
+<br/>
+
+<details>
+<summary><kbd>Improvements and Fixes</kbd></summary>
+
+#### What's improved
+
+- **misc**: Support Google / Zhipu / AWS Bedrock model providers, closes [#1173](https://github.com/lobehub/lobe-chat/issues/1173) ([d5929f6](https://github.com/lobehub/lobe-chat/commit/d5929f6))
+
+</details>
+
+<div align="right">
+
+[![](https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square)](#readme-top)
+
+</div>
+
 ### [Version 0.122.9](https://github.com/lobehub/lobe-chat/compare/v0.122.8...v0.122.9)
 
 <sup>Released on **2024-02-05**</sup>
