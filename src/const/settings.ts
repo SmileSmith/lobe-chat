@@ -47,6 +47,10 @@ export const DEFAULT_AGENT_CONFIG: LobeAgentConfig = {
 };
 
 export const DEFAULT_LLM_CONFIG: GlobalLLMConfig = {
+  anthropic: {
+    apiKey: '',
+    enabled: false,
+  },
   azure: {
     apiKey: '',
     deployments: '',
