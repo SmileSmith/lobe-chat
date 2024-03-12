@@ -1,5 +1,4 @@
 import { DEFAULT_AGENT_META } from '@/const/meta';
-import { LanguageModel } from '@/types/llm';
 import { ModelProvider } from '@/libs/agent-runtime';
 import { LobeAgentConfig, LobeAgentTTSConfig } from '@/types/agent';
 import {
@@ -33,7 +32,7 @@ export const DEFAULT_AGENT_CONFIG: LobeAgentConfig = {
   displayMode: 'chat',
   enableAutoCreateTopic: true,
   historyCount: 1,
-  model: LanguageModel.GPT4_PREVIEW,
+  model: 'gpt-4-0125-preview',
   params: {
     frequency_penalty: 0,
     presence_penalty: 0,
