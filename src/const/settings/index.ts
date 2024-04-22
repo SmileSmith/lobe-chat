@@ -58,7 +58,7 @@ export const DEFAULT_AGENT_CONFIG: LobeAgentConfig = {
   },
   plugins: [],
   provider: ModelProvider.OpenAI,
-  systemRole: '尽量使用中文回答',
+  systemRole: '',
   tts: DEFAUTT_AGENT_TTS_CONFIG,
 };
 
