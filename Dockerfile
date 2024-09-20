@@ -1,15 +1,35 @@
 ## Base image for all the stages
-FROM node:20-alpine AS base
+FROM node:20-slim AS base
+
+ARG USE_CN_MIRROR
+
+ENV DEBIAN_FRONTEND="noninteractive"
 
 RUN \
-    # Add user nextjs to run the app
-    addgroup --system --gid 1001 nodejs \
-    && adduser --system --uid 1001 nextjs
+    # If you want to build docker in China, build with --build-arg USE_CN_MIRROR=true
+    if [ "${USE_CN_MIRROR:-false}" = "true" ]; then \
+        sed -i "s/deb.debian.org/mirrors.ustc.edu.cn/g" "/etc/apt/sources.list.d/debian.sources"; \
+    fi \
+    # Add required package & update base package
+    && apt update \
+    && apt install busybox proxychains-ng -qy \
+    && apt full-upgrade -qy \
+    && apt autoremove -qy --purge \
+    && apt clean -qy \
+    # Configure BusyBox
+    && busybox --install -s \
+    # Add nextjs:nodejs to run the app
+    && addgroup --system --gid 1001 nodejs \
+    && adduser --system --home "/app" --gid 1001 -uid 1001 nextjs \
+    # Set permission for nextjs:nodejs
+    && chown -R nextjs:nodejs "/etc/proxychains4.conf" \
+    # Cleanup temp files
+    && rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
 
 ## Builder image, install all the dependencies and build the app
 FROM base AS builder
 
-ARG USE_NPM_CN_MIRROR
+ARG USE_CN_MIRROR
 
 ENV NEXT_PUBLIC_BASE_PATH=""
 
@@ -37,8 +57,8 @@ COPY package.json ./
 COPY .npmrc ./
 
 RUN \
-    # If you want to build docker in China, build with --build-arg USE_NPM_CN_MIRROR=true
-    if [ "${USE_NPM_CN_MIRROR:-false}" = "true" ]; then \
+    # If you want to build docker in China, build with --build-arg USE_CN_MIRROR=true
+    if [ "${USE_CN_MIRROR:-false}" = "true" ]; then \
         export SENTRYCLI_CDNURL="https://npmmirror.com/mirrors/sentry-cli"; \
         npm config set registry "https://registry.npmmirror.com/"; \
     fi \
@@ -51,8 +71,8 @@ RUN \
     # Install the dependencies
     && pnpm i \
     # Add sharp dependencies
-    && mkdir -p /sharp \
-    && pnpm add sharp --prefix /sharp
+    && mkdir -p /deps \
+    && pnpm add sharp --prefix /deps
 
 COPY . .
 
@@ -68,7 +88,7 @@ COPY --from=builder /app/public /app/public
 # https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder /app/.next/standalone /app/
 COPY --from=builder /app/.next/static /app/.next/static
-COPY --from=builder /sharp/node_modules/.pnpm /app/node_modules/.pnpm
+COPY --from=builder /deps/node_modules/.pnpm /app/node_modules/.pnpm
 
 ## Production image, copy all the files and run next
 FROM base
@@ -76,7 +96,8 @@ FROM base
 # Copy all the files from app, set the correct permission for prerender cache
 COPY --from=app --chown=nextjs:nodejs /app /app
 
-ENV NODE_ENV="production"
+ENV NODE_ENV="production" \
+    NODE_TLS_REJECT_UNAUTHORIZED=""
 
 # set hostname to localhost
 ENV HOSTNAME="0.0.0.0" \
@@ -85,26 +106,35 @@ ENV HOSTNAME="0.0.0.0" \
 # General Variables
 ENV ACCESS_CODE="" \
     API_KEY_SELECT_MODE="" \
-    FEATURE_FLAGS=""
+    DEFAULT_AGENT_CONFIG="" \
+    SYSTEM_AGENT="" \
+    FEATURE_FLAGS="" \
+    PROXY_URL=""
 
 # Model Variables
 ENV \
+    # AI21
+    AI21_API_KEY="" \
     # Ai360
     AI360_API_KEY="" \
     # Anthropic
     ANTHROPIC_API_KEY="" ANTHROPIC_PROXY_URL="" \
     # Amazon Bedrock
-    AWS_ACCESS_KEY_ID="" AWS_SECRET_ACCESS_KEY="" AWS_REGION="" \
+    AWS_ACCESS_KEY_ID="" AWS_SECRET_ACCESS_KEY="" AWS_REGION="" AWS_BEDROCK_MODEL_LIST="" \
     # Azure OpenAI
     AZURE_API_KEY="" AZURE_API_VERSION="" AZURE_ENDPOINT="" AZURE_MODEL_LIST="" \
     # Baichuan
     BAICHUAN_API_KEY="" \
     # DeepSeek
     DEEPSEEK_API_KEY="" \
+    # Fireworks AI
+    FIREWORKSAI_API_KEY="" FIREWORKSAI_MODEL_LIST="" \
+    # GitHub
+    GITHUB_TOKEN="" GITHUB_MODEL_LIST="" \
     # Google
     GOOGLE_API_KEY="" GOOGLE_PROXY_URL="" \
     # Groq
-    GROQ_API_KEY="" GROQ_PROXY_URL="" \
+    GROQ_API_KEY="" GROQ_MODEL_LIST="" GROQ_PROXY_URL="" \
     # Minimax
     MINIMAX_API_KEY="" \
     # Mistral
@@ -112,7 +142,7 @@ ENV \
     # Moonshot
     MOONSHOT_API_KEY="" MOONSHOT_PROXY_URL="" \
     # Novita
-    NOVITA_API_KEY="" \
+    NOVITA_API_KEY="" NOVITA_MODEL_LIST="" \
     # Ollama
     OLLAMA_MODEL_LIST="" OLLAMA_PROXY_URL="" \
     # OpenAI
@@ -122,20 +152,58 @@ ENV \
     # Perplexity
     PERPLEXITY_API_KEY="" PERPLEXITY_PROXY_URL="" \
     # Qwen
-    QWEN_API_KEY="" \
+    QWEN_API_KEY="" QWEN_MODEL_LIST="" \
+    # SiliconCloud
+    SILICONCLOUD_API_KEY="" SILICONCLOUD_MODEL_LIST="" SILICONCLOUD_PROXY_URL="" \
+    # Spark
+    SPARK_API_KEY="" \
     # Stepfun
     STEPFUN_API_KEY="" \
     # Taichu
     TAICHU_API_KEY="" \
     # TogetherAI
     TOGETHERAI_API_KEY="" TOGETHERAI_MODEL_LIST="" \
+    # Upstage
+    UPSTAGE_API_KEY="" \
     # 01.AI
-    ZEROONE_API_KEY="" \
+    ZEROONE_API_KEY="" ZEROONE_MODEL_LIST="" \
     # Zhipu
-    ZHIPU_API_KEY=""
+    ZHIPU_API_KEY="" ZHIPU_MODEL_LIST=""
 
 USER nextjs
 
 EXPOSE 3210/tcp
 
-CMD ["node", "/app/server.js"]
+CMD \
+    if [ -n "$PROXY_URL" ]; then \
+        # Set regex for IPv4
+        IP_REGEX="^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$"; \
+        # Set proxychains command
+        PROXYCHAINS="proxychains -q"; \
+        # Parse the proxy URL
+        host_with_port="${PROXY_URL#*//}"; \
+        host="${host_with_port%%:*}"; \
+        port="${PROXY_URL##*:}"; \
+        protocol="${PROXY_URL%%://*}"; \
+        # Resolve to IP address if the host is a domain
+        if ! [[ "$host" =~ "$IP_REGEX" ]]; then \
+            nslookup=$(nslookup -q="A" "$host" | tail -n +3 | grep 'Address:'); \
+            if [ -n "$nslookup" ]; then \
+                host=$(echo "$nslookup" | tail -n 1 | awk '{print $2}'); \
+            fi; \
+        fi; \
+        # Generate proxychains configuration file
+        printf "%s\n" \
+            'localnet 127.0.0.0/255.0.0.0' \
+            'localnet ::1/128' \
+            'proxy_dns' \
+            'remote_dns_subnet 224' \
+            'strict_chain' \
+            'tcp_connect_time_out 8000' \
+            'tcp_read_time_out 15000' \
+            '[ProxyList]' \
+            "$protocol $host $port" \
+        > "/etc/proxychains4.conf"; \
+    fi; \
+    # Run the server
+    ${PROXYCHAINS} node "/app/server.js";
