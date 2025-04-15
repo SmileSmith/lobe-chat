@@ -1,7 +1,7 @@
 import { uniqBy } from 'lodash-es';
 
 import { filterEnabledModels } from '@/config/modelProviders';
-import { EnabledProviderWithModels } from '@/types/aiModel';
+import { EnabledProviderWithModels } from '@/types/aiProvider';
 import { ChatModelCard, ModelProviderCard } from '@/types/llm';
 import { ServerModelProviderConfig } from '@/types/serverConfig';
 import { GlobalLLMProviderKey } from '@/types/user/settings';
@@ -122,6 +122,9 @@ const isModelEnabledFunctionCall = (id: string) => (s: UserStore) =>
 const isModelEnabledVision = (id: string) => (s: UserStore) =>
   getModelCardById(id)(s)?.vision || id.includes('vision');
 
+const isModelEnabledReasoning = (id: string) => (s: UserStore) =>
+  getModelCardById(id)(s)?.reasoning || false;
+
 const isModelEnabledFiles = (id: string) => (s: UserStore) => getModelCardById(id)(s)?.files;
 
 const isModelEnabledUpload = (id: string) => (s: UserStore) =>
@@ -144,6 +147,7 @@ export const modelProviderSelectors = {
   getModelCardsById,
   isModelEnabledFiles,
   isModelEnabledFunctionCall,
+  isModelEnabledReasoning,
   isModelEnabledUpload,
   isModelEnabledVision,
   isModelHasMaxToken,

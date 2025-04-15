@@ -1,4 +1,4 @@
-import { isProviderDisableBroswerRequest } from '@/config/modelProviders';
+import { isProviderDisableBrowserRequest } from '@/config/modelProviders';
 import { AIProviderStoreState } from '@/store/aiInfra/initialState';
 import { AiProviderRuntimeConfig } from '@/types/aiProvider';
 import { GlobalLLMProviderKey } from '@/types/user/settings';
@@ -37,6 +37,17 @@ const isActiveProviderApiKeyNotEmpty = (s: AIProviderStoreState) => {
   return !!vault?.apiKey || !!vault?.accessKeyId || !!vault?.secretAccessKey;
 };
 
+const providerConfigById =
+  (id: string) =>
+  (s: AIProviderStoreState): AiProviderRuntimeConfig | undefined => {
+    if (!id) return undefined;
+
+    return s.aiProviderRuntimeConfig?.[id];
+  };
+
+const isProviderConfigUpdating = (id: string) => (s: AIProviderStoreState) =>
+  s.aiProviderConfigUpdatingIds.includes(id);
+
 /**
  * @description The conditions to enable client fetch
  * 1. If no baseUrl and apikey input, force on Server.
@@ -46,18 +57,18 @@ const isActiveProviderApiKeyNotEmpty = (s: AIProviderStoreState) => {
  */
 const isProviderFetchOnClient =
   (provider: GlobalLLMProviderKey | string) => (s: AIProviderStoreState) => {
-    const config = activeProviderConfig(s);
+    const config = providerConfigById(provider)(s);
 
-    // If the provider already disable broswer request in model config, force on Server.
-    if (isProviderDisableBroswerRequest(provider)) return false;
+    // If the provider already disable browser request in model config, force on Server.
+    if (isProviderDisableBrowserRequest(provider)) return false;
 
     // If the provider in the whitelist, follow the user settings
     if (providerWhitelist.has(provider) && typeof config?.fetchOnClient !== 'undefined')
       return config?.fetchOnClient;
 
     // 1. If no baseUrl and apikey input, force on Server.
-    const isProviderEndpointNotEmpty = isActiveProviderEndpointNotEmpty(s);
-    const isProviderApiKeyNotEmpty = isActiveProviderApiKeyNotEmpty(s);
+    const isProviderEndpointNotEmpty = !!config?.keyVaults.baseURL;
+    const isProviderApiKeyNotEmpty = !!config?.keyVaults.apiKey;
     if (!isProviderEndpointNotEmpty && !isProviderApiKeyNotEmpty) return false;
 
     // 2. If only contains baseUrl, force on Client
@@ -76,16 +87,17 @@ const providerKeyVaults = (provider: string | undefined) => (s: AIProviderStoreS
   return s.aiProviderRuntimeConfig?.[provider]?.keyVaults;
 };
 
-const providerConfigById =
-  (id: string) =>
-  (s: AIProviderStoreState): AiProviderRuntimeConfig | undefined => {
-    if (!id) return undefined;
+const isProviderHasBuiltinSearch = (provider: string) => (s: AIProviderStoreState) => {
+  const config = providerConfigById(provider)(s);
 
-    return s.aiProviderRuntimeConfig?.[id];
-  };
+  return !!config?.settings.searchMode;
+};
 
-const isProviderConfigUpdating = (id: string) => (s: AIProviderStoreState) =>
-  s.aiProviderConfigUpdatingIds.includes(id);
+const isProviderHasBuiltinSearchConfig = (id: string) => (s: AIProviderStoreState) => {
+  const providerCfg = providerConfigById(id)(s);
+
+  return !!providerCfg?.settings.searchMode && providerCfg?.settings.searchMode !== 'internal';
+};
 
 export const aiProviderSelectors = {
   activeProviderConfig,
@@ -97,6 +109,8 @@ export const aiProviderSelectors = {
   isProviderConfigUpdating,
   isProviderEnabled,
   isProviderFetchOnClient,
+  isProviderHasBuiltinSearch,
+  isProviderHasBuiltinSearchConfig,
   isProviderLoading,
   providerConfigById,
   providerKeyVaults,

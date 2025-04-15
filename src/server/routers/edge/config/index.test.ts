@@ -4,9 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 /**
  * This file contains the root router of your tRPC-backend
  */
-import { createCallerFactory } from '@/libs/trpc';
-import { AuthContext, createContextInner } from '@/server/context';
-import { GlobalServerConfig } from '@/types/serverConfig';
+import { createCallerFactory } from '@/libs/trpc/edge';
+import { AuthContext, createContextInner } from '@/libs/trpc/edge/context';
 
 import { configRouter } from './index';
 
@@ -37,7 +36,7 @@ describe('configRouter', () => {
           const response = await router.getGlobalConfig();
 
           // Assert
-          const result = response.languageModel?.openai;
+          const result = response.serverConfig.languageModel?.openai;
 
           expect(result).toMatchSnapshot();
           process.env.OPENAI_MODEL_LIST = '';
@@ -49,7 +48,7 @@ describe('configRouter', () => {
 
           const response = await router.getGlobalConfig();
 
-          const result = response.languageModel?.openai?.serverModelCards;
+          const result = response.serverConfig.languageModel?.openai?.serverModelCards;
 
           expect(result).toMatchSnapshot();
 
@@ -62,7 +61,7 @@ describe('configRouter', () => {
 
           const response = await router.getGlobalConfig();
 
-          const result = response.languageModel?.openai?.serverModelCards;
+          const result = response.serverConfig.languageModel?.openai?.serverModelCards;
 
           expect(result?.find((s) => s.id === 'gpt-4-0125-preview')?.displayName).toEqual(
             'gpt-4-32k',
@@ -76,7 +75,7 @@ describe('configRouter', () => {
 
           const response = await router.getGlobalConfig();
 
-          const result = response.languageModel?.openai?.serverModelCards;
+          const result = response.serverConfig.languageModel?.openai?.serverModelCards;
 
           expect(result?.find((r) => r.id === 'gpt-4')).toBeUndefined();
 
@@ -88,7 +87,7 @@ describe('configRouter', () => {
 
           const response = await router.getGlobalConfig();
 
-          const result = response.languageModel?.openai?.serverModelCards;
+          const result = response.serverConfig.languageModel?.openai?.serverModelCards;
 
           const model = result?.find((o) => o.id === 'gpt-4-1106-preview');
 
@@ -102,7 +101,7 @@ describe('configRouter', () => {
 
           const response = await router.getGlobalConfig();
 
-          const result = response.languageModel?.openai?.serverModelCards;
+          const result = response.serverConfig.languageModel?.openai?.serverModelCards;
 
           expect(result).toContainEqual({
             displayName: 'model1',
@@ -137,7 +136,7 @@ describe('configRouter', () => {
           const response = await router.getGlobalConfig();
 
           // Assert
-          const result = response.languageModel?.openrouter;
+          const result = response.serverConfig.languageModel?.openrouter;
 
           expect(result).toMatchSnapshot();
 

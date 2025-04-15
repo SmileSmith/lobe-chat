@@ -6,14 +6,22 @@ import ReactComponentName from 'react-scan/react-component-name/webpack';
 
 const isProd = process.env.NODE_ENV === 'production';
 const buildWithDocker = process.env.DOCKER === 'true';
+const isDesktop = process.env.NEXT_PUBLIC_IS_DESKTOP_APP === '1';
 const enableReactScan = !!process.env.REACT_SCAN_MONITOR_API_KEY;
 const isUsePglite = process.env.NEXT_PUBLIC_CLIENT_DB === 'pglite';
 
 // if you need to proxy the api endpoint to remote server
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH;
+const isStandaloneMode = buildWithDocker || isDesktop;
+
+const standaloneConfig: NextConfig = {
+  output: 'standalone',
+  outputFileTracingIncludes: { '*': ['public/**/*', '.next/static/**/*'] },
+};
 
 const nextConfig: NextConfig = {
+  ...(isStandaloneMode ? standaloneConfig : {}),
   basePath,
   compress: isProd,
   experimental: {
@@ -104,7 +112,12 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  output: buildWithDocker ? 'standalone' : undefined,
+  logging: {
+    fetches: {
+      fullUrl: true,
+      hmrRefreshes: true,
+    },
+  },
   reactStrictMode: true,
   redirects: async () => [
     {
@@ -164,8 +177,21 @@ const nextConfig: NextConfig = {
       permanent: true,
       source: '/welcome',
     },
+    // TODO: 等 V2 做强制跳转吧
+    // {
+    //   destination: '/settings/provider/volcengine',
+    //   permanent: true,
+    //   source: '/settings/provider/doubao',
+    // },
+    // we need back /repos url in the further
+    {
+      destination: '/files',
+      permanent: false,
+      source: '/repos',
+    },
   ],
-  serverExternalPackages: ['@electric-sql/pglite', 'sharp'],
+  // when external packages in dev mode with turbopack, this config will lead to bundle error
+  serverExternalPackages: isProd ? ['@electric-sql/pglite'] : undefined,
 
   transpilePackages: ['pdfjs-dist', 'mermaid'],
 
@@ -195,6 +221,12 @@ const nextConfig: NextConfig = {
 
     config.resolve.alias.canvas = false;
 
+    // to ignore epub2 compile error
+    // refs: https://github.com/lobehub/lobe-chat/discussions/6769
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      zipfile: false,
+    };
     return config;
   },
 };
@@ -203,13 +235,14 @@ const noWrapper = (config: NextConfig) => config;
 
 const withBundleAnalyzer = process.env.ANALYZE === 'true' ? analyzer() : noWrapper;
 
-const withPWA = isProd
-  ? withSerwistInit({
-      register: false,
-      swDest: 'public/sw.js',
-      swSrc: 'src/app/sw.ts',
-    })
-  : noWrapper;
+const withPWA =
+  isProd && !isDesktop
+    ? withSerwistInit({
+        register: false,
+        swDest: 'public/sw.js',
+        swSrc: 'src/app/sw.ts',
+      })
+    : noWrapper;
 
 const hasSentry = !!process.env.NEXT_PUBLIC_SENTRY_DSN;
 const withSentry =

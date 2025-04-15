@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ServerConfigStoreProvider } from '@/store/serverConfig';
+import { ServerConfigStoreProvider } from '@/store/serverConfig/Provider';
 import { useUserStore } from '@/store/user';
 
 import { useMenu } from '../UserPanel/useMenu';
@@ -81,7 +81,6 @@ describe('useMenu', () => {
       expect(mainItems?.some((item) => item?.key === 'profile')).toBe(true);
       expect(mainItems?.some((item) => item?.key === 'setting')).toBe(true);
       expect(mainItems?.some((item) => item?.key === 'import')).toBe(true);
-      expect(mainItems?.some((item) => item?.key === 'export')).toBe(true);
       expect(mainItems?.some((item) => item?.key === 'changelog')).toBe(true);
       expect(logoutItems.some((item) => item?.key === 'logout')).toBe(true);
     });
@@ -100,7 +99,6 @@ describe('useMenu', () => {
       expect(mainItems?.some((item) => item?.key === 'profile')).toBe(true);
       expect(mainItems?.some((item) => item?.key === 'setting')).toBe(true);
       expect(mainItems?.some((item) => item?.key === 'import')).toBe(true);
-      expect(mainItems?.some((item) => item?.key === 'export')).toBe(true);
       expect(mainItems?.some((item) => item?.key === 'changelog')).toBe(true);
       expect(logoutItems.some((item) => item?.key === 'logout')).toBe(false);
     });

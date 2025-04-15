@@ -1,16 +1,19 @@
 import { appEnv, getAppConfig } from '@/config/app';
 import { authEnv } from '@/config/auth';
 import { fileEnv } from '@/config/file';
+import { knowledgeEnv } from '@/config/knowledge';
 import { langfuseEnv } from '@/config/langfuse';
 import { enableNextAuth } from '@/const/auth';
+import { isDesktop } from '@/const/version';
 import { parseSystemAgent } from '@/server/globalConfig/parseSystemAgent';
 import { GlobalServerConfig } from '@/types/serverConfig';
 
 import { genServerLLMConfig } from './_deprecated';
 import { genServerAiProvidersConfig } from './genServerAiProviderConfig';
 import { parseAgentConfig } from './parseDefaultAgent';
+import { parseFilesConfig } from './parseFilesConfig';
 
-export const getServerGlobalConfig = () => {
+export const getServerGlobalConfig = async () => {
   const { ACCESS_CODES, DEFAULT_AGENT_CONFIG } = getAppConfig();
 
   const config: GlobalServerConfig = {
@@ -23,12 +26,29 @@ export const getServerGlobalConfig = () => {
         enabledKey: 'ENABLED_AWS_BEDROCK',
         modelListKey: 'AWS_BEDROCK_MODEL_LIST',
       },
+      doubao: {
+        withDeploymentName: true,
+      },
       giteeai: {
         enabledKey: 'ENABLED_GITEE_AI',
         modelListKey: 'GITEE_AI_MODEL_LIST',
       },
+      /* ↓ cloud slot ↓ */
+
+      /* ↑ cloud slot ↑ */
       ollama: {
-        fetchOnClient: !process.env.OLLAMA_PROXY_URL,
+        enabled: isDesktop ? true : undefined,
+        fetchOnClient: isDesktop ? false : !process.env.OLLAMA_PROXY_URL,
+      },
+      openai: {
+        enabled: isDesktop ? false : undefined,
+      },
+      tencentcloud: {
+        enabledKey: 'ENABLED_TENCENT_CLOUD',
+        modelListKey: 'TENCENT_CLOUD_MODEL_LIST',
+      },
+      volcengine: {
+        withDeploymentName: true,
       },
     }),
     defaultAgent: {
@@ -72,4 +92,8 @@ export const getServerDefaultAgentConfig = () => {
   const { DEFAULT_AGENT_CONFIG } = getAppConfig();
 
   return parseAgentConfig(DEFAULT_AGENT_CONFIG) || {};
+};
+
+export const getServerDefaultFilesConfig = () => {
+  return parseFilesConfig(knowledgeEnv.DEFAULT_FILES_CONFIG);
 };

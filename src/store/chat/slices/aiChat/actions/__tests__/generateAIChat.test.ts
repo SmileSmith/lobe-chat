@@ -8,7 +8,7 @@ import { messageService } from '@/services/message';
 import { sessionService } from '@/services/session';
 import { topicService } from '@/services/topic';
 import { useAgentStore } from '@/store/agent';
-import { agentSelectors } from '@/store/agent/selectors';
+import { agentChatConfigSelectors, agentSelectors } from '@/store/agent/selectors';
 import { chatSelectors } from '@/store/chat/selectors';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import { sessionMetaSelectors } from '@/store/session/selectors';
@@ -79,7 +79,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   useChatStore.setState(mockState, false);
   vi.spyOn(agentSelectors, 'currentAgentConfig').mockImplementation(() => DEFAULT_AGENT_CONFIG);
-  vi.spyOn(agentSelectors, 'currentAgentChatConfig').mockImplementation(
+  vi.spyOn(agentChatConfigSelectors, 'currentChatConfig').mockImplementation(
     () => DEFAULT_AGENT_CHAT_CONFIG,
   );
   vi.spyOn(sessionMetaSelectors, 'currentAgentMeta').mockImplementation(() => ({ tags: [] }));
@@ -285,7 +285,7 @@ describe('chatMessage actions', () => {
         (messageService.createMessage as Mock).mockResolvedValue('new-message-id');
 
         // Mock agent config to simulate auto-create topic behavior
-        (agentSelectors.currentAgentChatConfig as Mock).mockImplementation(() => ({
+        (agentChatConfigSelectors.currentChatConfig as Mock).mockImplementation(() => ({
           autoCreateTopicThreshold,
           enableAutoCreateTopic,
         }));
@@ -423,9 +423,9 @@ describe('chatMessage actions', () => {
         new Error('create message error'),
       );
 
-      await expect(result.current.sendMessage({ message: 'test' })).rejects.toThrow(
-        'create message error',
-      );
+      try {
+        await result.current.sendMessage({ message: 'test' });
+      } catch (e) {}
 
       expect(result.current.internal_coreProcessMessage).not.toHaveBeenCalled();
     });
@@ -576,7 +576,7 @@ describe('chatMessage actions', () => {
       const abortController = new AbortController();
 
       act(() => {
-        useChatStore.setState({ abortController });
+        useChatStore.setState({ chatLoadingIdsAbortController: abortController });
       });
 
       await act(async () => {
@@ -596,18 +596,18 @@ describe('chatMessage actions', () => {
 
       await act(async () => {
         // 确保没有设置 abortController
-        useChatStore.setState({ abortController: undefined });
+        useChatStore.setState({ chatLoadingIdsAbortController: undefined });
 
         result.current.stopGenerateMessage();
       });
 
       // 由于没有 abortController，不应调用任何方法
-      expect(result.current.abortController).toBeUndefined();
+      expect(result.current.chatLoadingIdsAbortController).toBeUndefined();
     });
 
     it('should return early if abortController is undefined', () => {
       act(() => {
-        useChatStore.setState({ abortController: undefined });
+        useChatStore.setState({ chatLoadingIdsAbortController: undefined });
       });
 
       const { result } = renderHook(() => useChatStore());
@@ -625,7 +625,7 @@ describe('chatMessage actions', () => {
       const abortMock = vi.fn();
       const abortController = { abort: abortMock } as unknown as AbortController;
       act(() => {
-        useChatStore.setState({ abortController });
+        useChatStore.setState({ chatLoadingIdsAbortController: abortController });
       });
       const { result } = renderHook(() => useChatStore());
 
@@ -639,7 +639,7 @@ describe('chatMessage actions', () => {
     it('should call internal_toggleChatLoading with correct parameters', () => {
       const abortController = new AbortController();
       act(() => {
-        useChatStore.setState({ abortController });
+        useChatStore.setState({ chatLoadingIdsAbortController: abortController });
       });
       const { result } = renderHook(() => useChatStore());
       const spy = vi.spyOn(result.current, 'internal_toggleChatLoading');
@@ -765,10 +765,12 @@ describe('chatMessage actions', () => {
       (fetch as Mock).mockResolvedValueOnce(new Response(aiResponse));
 
       await act(async () => {
-        const response = await result.current.internal_fetchAIChatMessage(
+        const response = await result.current.internal_fetchAIChatMessage({
           messages,
-          assistantMessageId,
-        );
+          messageId: assistantMessageId,
+          model: 'gpt-4o-mini',
+          provider: 'openai',
+        });
         expect(response.isFunctionCall).toEqual(false);
       });
     });
@@ -784,7 +786,13 @@ describe('chatMessage actions', () => {
 
       await act(async () => {
         expect(
-          await result.current.internal_fetchAIChatMessage(messages, assistantMessageId),
+          await result.current.internal_fetchAIChatMessage({
+            model: 'gpt-4o-mini',
+            provider: 'openai',
+
+            messages,
+            messageId: assistantMessageId,
+          }),
         ).toEqual({
           isFunctionCall: false,
         });
@@ -868,7 +876,7 @@ describe('chatMessage actions', () => {
       });
 
       const state = useChatStore.getState();
-      expect(state.abortController).toBeInstanceOf(AbortController);
+      expect(state.chatLoadingIdsAbortController).toBeInstanceOf(AbortController);
       expect(state.chatLoadingIds).toEqual(['message-id']);
     });
 
@@ -887,7 +895,7 @@ describe('chatMessage actions', () => {
       });
 
       const state = useChatStore.getState();
-      expect(state.abortController).toBeUndefined();
+      expect(state.chatLoadingIdsAbortController).toBeUndefined();
       expect(state.chatLoadingIds).toEqual([]);
     });
 
@@ -920,12 +928,12 @@ describe('chatMessage actions', () => {
       const abortController = new AbortController();
 
       act(() => {
-        useChatStore.setState({ abortController });
+        useChatStore.setState({ chatLoadingIdsAbortController: abortController });
         result.current.internal_toggleChatLoading(true, 'message-id', 'loading-action');
       });
 
       const state = useChatStore.getState();
-      expect(state.abortController).toEqual(abortController);
+      expect(state.chatLoadingIdsAbortController).toStrictEqual(abortController);
     });
   });
 

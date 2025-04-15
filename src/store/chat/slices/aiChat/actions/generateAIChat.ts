@@ -5,29 +5,35 @@ import { template } from 'lodash-es';
 import { StateCreator } from 'zustand/vanilla';
 
 import { LOADING_FLAT, MESSAGE_CANCEL_FLAT } from '@/const/message';
-import { DEFAULT_AGENT_CHAT_CONFIG } from '@/const/settings';
 import { TraceEventType, TraceNameMap } from '@/const/trace';
 import { isServerMode } from '@/const/version';
 import { knowledgeBaseQAPrompts } from '@/prompts/knowledgeBaseQA';
 import { chatService } from '@/services/chat';
 import { messageService } from '@/services/message';
 import { useAgentStore } from '@/store/agent';
+import { agentChatConfigSelectors, agentSelectors } from '@/store/agent/selectors';
+import { getAgentStoreState } from '@/store/agent/store';
+import { aiModelSelectors } from '@/store/aiInfra';
+import { getAiInfraStoreState } from '@/store/aiInfra/store';
 import { chatHelpers } from '@/store/chat/helpers';
 import { ChatStore } from '@/store/chat/store';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
+import { getFileStoreState } from '@/store/file/store';
 import { useSessionStore } from '@/store/session';
+import { WebBrowsingManifest } from '@/tools/web-browsing';
 import { ChatMessage, CreateMessageParams, SendMessageParams } from '@/types/message';
+import { ChatImageItem } from '@/types/message/image';
 import { MessageSemanticSearchChunk } from '@/types/rag';
 import { setNamespace } from '@/utils/storeDebug';
 
 import { chatSelectors, topicSelectors } from '../../../selectors';
-import { getAgentChatConfig, getAgentConfig, getAgentKnowledge } from './helpers';
 
 const n = setNamespace('ai');
 
 interface ProcessMessageParams {
   traceId?: string;
   isWelcomeQuestion?: boolean;
+  inSearchWorkflow?: boolean;
   /**
    * the RAG query content, should be embedding and used in the semantic search
    */
@@ -70,11 +76,13 @@ export interface AIGenerateAction {
   /**
    * Retrieves an AI-generated chat message from the backend service
    */
-  internal_fetchAIChatMessage: (
-    messages: ChatMessage[],
-    assistantMessageId: string,
-    params?: ProcessMessageParams,
-  ) => Promise<{
+  internal_fetchAIChatMessage: (input: {
+    messages: ChatMessage[];
+    messageId: string;
+    params?: ProcessMessageParams;
+    model: string;
+    provider: string;
+  }) => Promise<{
     isFunctionCall: boolean;
     traceId?: string;
   }>;
@@ -102,6 +110,16 @@ export interface AIGenerateAction {
    * Controls the streaming state of tool calling processes, updating the UI accordingly
    */
   internal_toggleToolCallingStreaming: (id: string, streaming: boolean[] | undefined) => void;
+  /**
+   * Toggles the loading state for AI message reasoning, managing the UI feedback
+   */
+  internal_toggleChatReasoning: (
+    loading: boolean,
+    id?: string,
+    action?: string,
+  ) => AbortController | undefined;
+
+  internal_toggleSearchWorkflow: (loading: boolean, id?: string) => void;
 }
 
 export const generateAIChat: StateCreator<
@@ -150,7 +168,7 @@ export const generateAIChat: StateCreator<
       threadId: activeThreadId,
     };
 
-    const agentConfig = getAgentChatConfig();
+    const agentConfig = agentChatConfigSelectors.currentChatConfig(getAgentStoreState());
 
     let tempMessageId: string | undefined = undefined;
     let newTopicId: string | undefined = undefined;
@@ -197,6 +215,12 @@ export const generateAIChat: StateCreator<
       tempMessageId,
       skipRefresh: !onlyAddUserMessage && newMessage.fileList?.length === 0,
     });
+
+    if (!id) {
+      set({ isCreatingMessage: false }, false, n('creatingMessage/start'));
+      if (!!newTopicId) get().internal_updateTopicLoading(newTopicId, false);
+      return;
+    }
 
     if (tempMessageId) get().internal_toggleMessageLoading(false, tempMessageId);
 
@@ -259,10 +283,11 @@ export const generateAIChat: StateCreator<
     await Promise.all([summaryTitle(), addFilesToAgent()]);
   },
   stopGenerateMessage: () => {
-    const { abortController, internal_toggleChatLoading } = get();
-    if (!abortController) return;
+    const { chatLoadingIdsAbortController, internal_toggleChatLoading } = get();
 
-    abortController.abort(MESSAGE_CANCEL_FLAT);
+    if (!chatLoadingIdsAbortController) return;
+
+    chatLoadingIdsAbortController.abort(MESSAGE_CANCEL_FLAT);
 
     internal_toggleChatLoading(false, undefined, n('stopGenerateMessage') as string);
   },
@@ -274,7 +299,7 @@ export const generateAIChat: StateCreator<
     // create a new array to avoid the original messages array change
     const messages = [...originalMessages];
 
-    const { model, provider, chatConfig } = getAgentConfig();
+    const { model, provider, chatConfig } = agentSelectors.currentAgentConfig(getAgentStoreState());
 
     let fileChunks: MessageSemanticSearchChunk[] | undefined;
     let ragQueryId;
@@ -298,7 +323,7 @@ export const generateAIChat: StateCreator<
         chunks,
         userQuery: lastMsg.content,
         rewriteQuery,
-        knowledge: getAgentKnowledge(),
+        knowledge: agentSelectors.currentEnabledKnowledge(getAgentStoreState()),
       });
 
       // 3. add the retrieve context messages to the messages history
@@ -327,10 +352,105 @@ export const generateAIChat: StateCreator<
 
     const assistantId = await get().internal_createMessage(assistantMessage);
 
-    // 3. fetch the AI response
-    const { isFunctionCall } = await internal_fetchAIChatMessage(messages, assistantId, params);
+    if (!assistantId) return;
 
-    // 4. if it's the function call message, trigger the function method
+    // 3. place a search with the search working model if this model is not support tool use
+    const isModelSupportToolUse = aiModelSelectors.isModelSupportToolUse(
+      model,
+      provider!,
+    )(getAiInfraStoreState());
+    const isAgentEnableSearch = agentChatConfigSelectors.isAgentEnableSearch(getAgentStoreState());
+
+    if (isAgentEnableSearch && !isModelSupportToolUse) {
+      const { model, provider } = agentChatConfigSelectors.searchFCModel(getAgentStoreState());
+
+      let isToolsCalling = false;
+      let isError = false;
+
+      const abortController = get().internal_toggleChatLoading(
+        true,
+        assistantId,
+        n('generateMessage(start)', { messageId: assistantId, messages }) as string,
+      );
+
+      get().internal_toggleSearchWorkflow(true, assistantId);
+      await chatService.fetchPresetTaskResult({
+        params: { messages, model, provider, plugins: [WebBrowsingManifest.identifier] },
+        onFinish: async (_, { toolCalls, usage }) => {
+          if (toolCalls && toolCalls.length > 0) {
+            get().internal_toggleToolCallingStreaming(assistantId, undefined);
+            // update tools calling
+            await get().internal_updateMessageContent(assistantId, '', {
+              toolCalls,
+              metadata: usage,
+              model,
+              provider,
+            });
+          }
+        },
+        trace: {
+          traceId: params?.traceId,
+          sessionId: get().activeId,
+          topicId: get().activeTopicId,
+          traceName: TraceNameMap.SearchIntentRecognition,
+        },
+        abortController,
+        onMessageHandle: async (chunk) => {
+          if (chunk.type === 'tool_calls') {
+            get().internal_toggleSearchWorkflow(false, assistantId);
+            get().internal_toggleToolCallingStreaming(assistantId, chunk.isAnimationActives);
+            get().internal_dispatchMessage({
+              id: assistantId,
+              type: 'updateMessage',
+              value: { tools: get().internal_transformToolCalls(chunk.tool_calls) },
+            });
+            isToolsCalling = true;
+          }
+
+          if (chunk.type === 'text') {
+            abortController!.abort('not fc');
+          }
+        },
+        onErrorHandle: async (error) => {
+          isError = true;
+          await messageService.updateMessageError(assistantId, error);
+          await refreshMessages();
+        },
+      });
+
+      get().internal_toggleChatLoading(
+        false,
+        assistantId,
+        n('generateMessage(start)', { messageId: assistantId, messages }) as string,
+      );
+      get().internal_toggleSearchWorkflow(false, assistantId);
+
+      // if there is error, then stop
+      if (isError) return;
+
+      // if it's the function call message, trigger the function method
+      if (isToolsCalling) {
+        await refreshMessages();
+        await triggerToolCalls(assistantId, {
+          threadId: params?.threadId,
+          inPortalThread: params?.inPortalThread,
+        });
+
+        // then story the workflow
+        return;
+      }
+    }
+
+    // 4. fetch the AI response
+    const { isFunctionCall } = await internal_fetchAIChatMessage({
+      messages,
+      messageId: assistantId,
+      params,
+      model,
+      provider: provider!,
+    });
+
+    // 5. if it's the function call message, trigger the function method
     if (isFunctionCall) {
       await refreshMessages();
       await triggerToolCalls(assistantId, {
@@ -339,12 +459,11 @@ export const generateAIChat: StateCreator<
       });
     }
 
-    // 5. summary history if context messages is larger than historyCount
-    const historyCount =
-      chatConfig.historyCount || (DEFAULT_AGENT_CHAT_CONFIG.historyCount as number);
+    // 6. summary history if context messages is larger than historyCount
+    const historyCount = agentChatConfigSelectors.historyCount(getAgentStoreState());
 
     if (
-      chatConfig.enableHistoryCount &&
+      agentChatConfigSelectors.enableHistoryCount(getAgentStoreState()) &&
       chatConfig.enableCompressHistory &&
       originalMessages.length > historyCount
     ) {
@@ -357,23 +476,24 @@ export const generateAIChat: StateCreator<
       await get().internal_summaryHistory(historyMessages);
     }
   },
-  internal_fetchAIChatMessage: async (messages, assistantId, params) => {
+  internal_fetchAIChatMessage: async ({ messages, messageId, params, provider, model }) => {
     const {
       internal_toggleChatLoading,
       refreshMessages,
       internal_updateMessageContent,
       internal_dispatchMessage,
       internal_toggleToolCallingStreaming,
+      internal_toggleChatReasoning,
     } = get();
 
     const abortController = internal_toggleChatLoading(
       true,
-      assistantId,
-      n('generateMessage(start)', { assistantId, messages }) as string,
+      messageId,
+      n('generateMessage(start)', { messageId, messages }) as string,
     );
 
-    const agentConfig = getAgentConfig();
-    const chatConfig = agentConfig.chatConfig;
+    const agentConfig = agentSelectors.currentAgentConfig(getAgentStoreState());
+    const chatConfig = agentChatConfigSelectors.currentChatConfig(getAgentStoreState());
 
     const compiler = template(chatConfig.inputTemplate, { interpolate: /{{([\S\s]+?)}}/g });
 
@@ -382,7 +502,14 @@ export const generateAIChat: StateCreator<
     // ================================== //
 
     // 1. slice messages with config
-    let preprocessMsgs = chatHelpers.getSlicedMessagesWithConfig(messages, chatConfig, true);
+    const historyCount = agentChatConfigSelectors.historyCount(getAgentStoreState());
+    const enableHistoryCount = agentChatConfigSelectors.enableHistoryCount(getAgentStoreState());
+
+    let preprocessMsgs = chatHelpers.getSlicedMessages(messages, {
+      includeNewUserMessage: true,
+      enableHistoryCount,
+      historyCount,
+    });
 
     // 2. replace inputMessage template
     preprocessMsgs = !chatConfig.inputTemplate
@@ -411,17 +538,27 @@ export const generateAIChat: StateCreator<
       ? agentConfig.params.max_tokens
       : undefined;
 
+    // 5. handle reasoning_effort
+    agentConfig.params.reasoning_effort = chatConfig.enableReasoningEffort
+      ? agentConfig.params.reasoning_effort
+      : undefined;
+
     let isFunctionCall = false;
     let msgTraceId: string | undefined;
     let output = '';
+    let thinking = '';
+    let thinkingStartAt: number;
+    let duration: number;
+    // to upload image
+    const uploadTasks: Map<string, Promise<{ id?: string; url?: string }>> = new Map();
 
     const historySummary = topicSelectors.currentActiveTopicSummary(get());
     await chatService.createAssistantMessageStream({
       abortController,
       params: {
         messages: preprocessMsgs,
-        model: agentConfig.model,
-        provider: agentConfig.provider,
+        model,
+        provider,
         ...agentConfig.params,
         plugins: agentConfig.plugins,
       },
@@ -434,43 +571,139 @@ export const generateAIChat: StateCreator<
       },
       isWelcomeQuestion: params?.isWelcomeQuestion,
       onErrorHandle: async (error) => {
-        await messageService.updateMessageError(assistantId, error);
+        await messageService.updateMessageError(messageId, error);
         await refreshMessages();
       },
-      onFinish: async (content, { traceId, observationId, toolCalls }) => {
+      onFinish: async (
+        content,
+        { traceId, observationId, toolCalls, reasoning, grounding, usage },
+      ) => {
         // if there is traceId, update it
         if (traceId) {
           msgTraceId = traceId;
-          await messageService.updateMessage(assistantId, {
+          await messageService.updateMessage(messageId, {
             traceId,
             observationId: observationId ?? undefined,
           });
         }
 
+        // 等待所有图片上传完成
+        let finalImages: ChatImageItem[] = [];
+
+        if (uploadTasks.size > 0) {
+          try {
+            // 等待所有上传任务完成
+            const uploadResults = await Promise.all(uploadTasks.values());
+
+            // 使用上传后的 S3 URL 替换原始图像数据
+            finalImages = uploadResults.filter((i) => !!i.url) as ChatImageItem[];
+          } catch (error) {
+            console.error('Error waiting for image uploads:', error);
+          }
+        }
+
         if (toolCalls && toolCalls.length > 0) {
-          internal_toggleToolCallingStreaming(assistantId, undefined);
+          internal_toggleToolCallingStreaming(messageId, undefined);
         }
 
         // update the content after fetch result
-        await internal_updateMessageContent(assistantId, content, toolCalls);
+        await internal_updateMessageContent(messageId, content, {
+          toolCalls,
+          reasoning: !!reasoning ? { ...reasoning, duration } : undefined,
+          search: !!grounding?.citations ? grounding : undefined,
+          metadata: usage,
+          imageList: finalImages.length > 0 ? finalImages : undefined,
+        });
       },
       onMessageHandle: async (chunk) => {
         switch (chunk.type) {
+          case 'grounding': {
+            // if there is no citations, then stop
+            if (
+              !chunk.grounding ||
+              !chunk.grounding.citations ||
+              chunk.grounding.citations.length <= 0
+            )
+              return;
+
+            internal_dispatchMessage({
+              id: messageId,
+              type: 'updateMessage',
+              value: {
+                search: {
+                  citations: chunk.grounding.citations,
+                  searchQueries: chunk.grounding.searchQueries,
+                },
+              },
+            });
+            break;
+          }
+
+          case 'base64_image': {
+            internal_dispatchMessage({
+              id: messageId,
+              type: 'updateMessage',
+              value: {
+                imageList: chunk.images.map((i) => ({ id: i.id, url: i.data, alt: i.id })),
+              },
+            });
+            const image = chunk.image;
+
+            const task = getFileStoreState()
+              .uploadBase64FileWithProgress(image.data)
+              .then((value) => ({
+                id: value?.id,
+                url: value?.url,
+                alt: value?.filename || value?.id,
+              }));
+
+            uploadTasks.set(image.id, task);
+
+            break;
+          }
+
           case 'text': {
             output += chunk.text;
+
+            // if there is no duration, it means the end of reasoning
+            if (!duration) {
+              duration = Date.now() - thinkingStartAt;
+              internal_toggleChatReasoning(false, messageId, n('generateMessage(end)') as string);
+            }
+
             internal_dispatchMessage({
-              id: assistantId,
+              id: messageId,
               type: 'updateMessage',
-              value: { content: output },
+              value: {
+                content: output,
+                reasoning: !!thinking ? { content: thinking, duration } : undefined,
+              },
+            });
+            break;
+          }
+
+          case 'reasoning': {
+            // if there is no thinkingStartAt, it means the start of reasoning
+            if (!thinkingStartAt) {
+              thinkingStartAt = Date.now();
+              internal_toggleChatReasoning(true, messageId, n('generateMessage(end)') as string);
+            }
+
+            thinking += chunk.text;
+
+            internal_dispatchMessage({
+              id: messageId,
+              type: 'updateMessage',
+              value: { reasoning: { content: thinking } },
             });
             break;
           }
 
           // is this message is just a tool call
           case 'tool_calls': {
-            internal_toggleToolCallingStreaming(assistantId, chunk.isAnimationActives);
+            internal_toggleToolCallingStreaming(messageId, chunk.isAnimationActives);
             internal_dispatchMessage({
-              id: assistantId,
+              id: messageId,
               type: 'updateMessage',
               value: { tools: get().internal_transformToolCalls(chunk.tool_calls) },
             });
@@ -480,12 +713,9 @@ export const generateAIChat: StateCreator<
       },
     });
 
-    internal_toggleChatLoading(false, assistantId, n('generateMessage(end)') as string);
+    internal_toggleChatLoading(false, messageId, n('generateMessage(end)') as string);
 
-    return {
-      isFunctionCall,
-      traceId: msgTraceId,
-    };
+    return { isFunctionCall, traceId: msgTraceId };
   },
 
   internal_resendMessage: async (
@@ -540,6 +770,9 @@ export const generateAIChat: StateCreator<
   internal_toggleChatLoading: (loading, id, action) => {
     return get().internal_toggleLoadingArrays('chatLoadingIds', loading, id, action);
   },
+  internal_toggleChatReasoning: (loading, id, action) => {
+    return get().internal_toggleLoadingArrays('reasoningLoadingIds', loading, id, action);
+  },
   internal_toggleToolCallingStreaming: (id, streaming) => {
     set(
       {
@@ -553,7 +786,11 @@ export const generateAIChat: StateCreator<
       },
 
       false,
-      'toggleToolCallingStreaming',
+      `toggleToolCallingStreaming/${!!streaming ? 'start' : 'end'}`,
     );
+  },
+
+  internal_toggleSearchWorkflow: (loading, id) => {
+    return get().internal_toggleLoadingArrays('searchWorkflowLoadingIds', loading, id);
   },
 });

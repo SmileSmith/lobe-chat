@@ -29,8 +29,8 @@ const isValidIP = (ip, version = 4) => {
 
 // Function to parse protocol, host and port from a URL
 const parseUrl = (url) => {
-  const { protocol, hostname: host, port } = new URL(url);
-  return { host, port: port || 443, protocol: protocol.replace(':', '') };
+  const { protocol, hostname: host, port, username: user, password: pass } = new URL(url);
+  return { host, pass, port: port || 443, protocol: protocol.replace(':', ''), user };
 };
 
 // Function to resolve host IP via DNS
@@ -55,7 +55,7 @@ const resolveHostIP = async (host, version = 4) => {
 
 // Function to generate proxychains configuration
 const runProxyChainsConfGenerator = async (url) => {
-  const { protocol, host, port } = parseUrl(url);
+  const { protocol, host, port, user, pass } = parseUrl(url);
 
   if (!['http', 'socks4', 'socks5'].includes(protocol)) {
     console.error(
@@ -74,20 +74,27 @@ const runProxyChainsConfGenerator = async (url) => {
 
   let ip = isValidIP(host, 4) ? host : await resolveHostIP(host, 4);
 
-  const configContent = `
-localnet 127.0.0.0/255.0.0.0
-localnet ::1/128
+  const proxyDNSConfig = process.env.ENABLE_PROXY_DNS === '1' ? `
 proxy_dns
 remote_dns_subnet 224
+`.trim() : '';
+
+  const configContent = `
+localnet 127.0.0.0/8
+localnet 10.0.0.0/8
+localnet 172.16.0.0/12
+localnet 192.168.0.0/16
+localnet ::/127
+${proxyDNSConfig}
 strict_chain
 tcp_connect_time_out 8000
 tcp_read_time_out 15000
 [ProxyList]
-${protocol} ${ip} ${port}
-`.trim();
+${protocol} ${ip} ${port} ${user} ${pass}
+`.replace(/\n{2,}/g, '\n').trim();
 
   await fs.writeFile(PROXYCHAINS_CONF_PATH, configContent);
-  console.log(`✅ ProxyChains: All outgoing traffic routed via ${protocol}://${ip}:${port}.`);
+  console.log(`✅ ProxyChains: All outgoing traffic routed via ${url}.`);
   console.log('-------------------------------------');
 };
 

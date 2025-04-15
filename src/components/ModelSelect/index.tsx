@@ -2,7 +2,15 @@ import { IconAvatarProps, ModelIcon, ProviderIcon } from '@lobehub/icons';
 import { Avatar, Icon, Tooltip } from '@lobehub/ui';
 import { Typography } from 'antd';
 import { createStyles } from 'antd-style';
-import { Infinity, LucideEye, LucidePaperclip, ToyBrick } from 'lucide-react';
+import {
+  Infinity,
+  AtomIcon,
+  LucideEye,
+  LucideGlobe,
+  LucideImage,
+  LucidePaperclip,
+  ToyBrick,
+} from 'lucide-react';
 import numeral from 'numeral';
 import { rgba } from 'polished';
 import { FC, memo } from 'react';
@@ -14,7 +22,7 @@ import { AiProviderSourceType } from '@/types/aiProvider';
 import { ChatModelCard } from '@/types/llm';
 import { formatTokenNumber } from '@/utils/format';
 
-const useStyles = createStyles(({ css, token }) => ({
+const useStyles = createStyles(({ css, token, isDarkMode }) => ({
   custom: css`
     width: 36px;
     height: 20px;
@@ -41,9 +49,21 @@ const useStyles = createStyles(({ css, token }) => ({
     color: ${token.geekblue};
     background: ${token.geekblue1};
   `,
+  tagCyan: css`
+    color: ${isDarkMode ? token.cyan7 : token.cyan10};
+    background: ${isDarkMode ? token.cyan1 : token.cyan2};
+  `,
   tagGreen: css`
     color: ${token.green};
     background: ${token.green1};
+  `,
+  tagGreenDeep: css`
+    color: ${token.green9};
+    background: ${token.green3};
+  `,
+  tagPurple: css`
+    color: ${token.purple};
+    background: ${token.purple1};
   `,
   token: css`
     width: 36px;
@@ -83,6 +103,17 @@ export const ModelInfoTags = memo<ModelInfoTagsProps>(
             </div>
           </Tooltip>
         )}
+        {model.imageOutput && (
+          <Tooltip
+            placement={placement}
+            styles={{ root: { pointerEvents: 'none' } }}
+            title={t('ModelSelect.featureTag.imageOutput')}
+          >
+            <div className={cx(styles.tag, styles.tagGreen)} style={{ cursor: 'pointer' }} title="">
+              <Icon icon={LucideImage} />
+            </div>
+          </Tooltip>
+        )}
         {model.vision && (
           <Tooltip
             placement={placement}
@@ -104,6 +135,28 @@ export const ModelInfoTags = memo<ModelInfoTagsProps>(
           >
             <div className={cx(styles.tag, styles.tagBlue)} style={{ cursor: 'pointer' }} title="">
               <Icon icon={ToyBrick} />
+            </div>
+          </Tooltip>
+        )}
+        {model.reasoning && (
+          <Tooltip
+            placement={placement}
+            styles={{ root: { pointerEvents: 'none' } }}
+            title={t('ModelSelect.featureTag.reasoning')}
+          >
+            <div className={cx(styles.tag, styles.tagPurple)} style={{ cursor: 'pointer' }}>
+              <Icon icon={AtomIcon} />
+            </div>
+          </Tooltip>
+        )}
+        {model.search && (
+          <Tooltip
+            placement={placement}
+            styles={{ root: { pointerEvents: 'none' } }}
+            title={t('ModelSelect.featureTag.search')}
+          >
+            <div className={cx(styles.tag, styles.tagCyan)} style={{ cursor: 'pointer' }} title="">
+              <Icon icon={LucideGlobe} />
             </div>
           </Tooltip>
         )}

@@ -1,10 +1,10 @@
 import { z } from 'zod';
 
+import { AiProviderModel } from '@/database/models/aiProvider';
+import { UserModel } from '@/database/models/user';
 import { AiInfraRepos } from '@/database/repositories/aiInfra';
-import { serverDB } from '@/database/server';
-import { AiProviderModel } from '@/database/server/models/aiProvider';
-import { UserModel } from '@/database/server/models/user';
-import { authedProcedure, router } from '@/libs/trpc';
+import { authedProcedure, router } from '@/libs/trpc/lambda';
+import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { getServerGlobalConfig } from '@/server/globalConfig';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import {
@@ -12,25 +12,26 @@ import {
   AiProviderRuntimeState,
   CreateAiProviderSchema,
   UpdateAiProviderConfigSchema,
+  UpdateAiProviderSchema,
 } from '@/types/aiProvider';
 import { ProviderConfig } from '@/types/user/settings';
 
-const aiProviderProcedure = authedProcedure.use(async (opts) => {
+const aiProviderProcedure = authedProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
 
-  const { aiProvider } = getServerGlobalConfig();
+  const { aiProvider } = await getServerGlobalConfig();
 
   const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
   return opts.next({
     ctx: {
       aiInfraRepos: new AiInfraRepos(
-        serverDB,
+        ctx.serverDB,
         ctx.userId,
         aiProvider as Record<string, ProviderConfig>,
       ),
-      aiProviderModel: new AiProviderModel(serverDB, ctx.userId),
+      aiProviderModel: new AiProviderModel(ctx.serverDB, ctx.userId),
       gateKeeper,
-      userModel: new UserModel(serverDB, ctx.userId),
+      userModel: new UserModel(ctx.serverDB, ctx.userId),
     },
   });
 });
@@ -48,7 +49,7 @@ export const aiProviderRouter = router({
     .input(z.object({ id: z.string() }))
 
     .query(async ({ input, ctx }): Promise<AiProviderDetailItem | undefined> => {
-      return ctx.aiProviderModel.getAiProviderById(input.id, KeyVaultsGateKeeper.getUserKeyVaults);
+      return ctx.aiInfraRepos.getAiProviderDetail(input.id, KeyVaultsGateKeeper.getUserKeyVaults);
     }),
 
   getAiProviderList: aiProviderProcedure.query(async ({ ctx }) => {
@@ -58,15 +59,7 @@ export const aiProviderRouter = router({
   getAiProviderRuntimeState: aiProviderProcedure
     .input(z.object({ isLogin: z.boolean().optional() }))
     .query(async ({ ctx }): Promise<AiProviderRuntimeState> => {
-      const runtimeConfig = await ctx.aiProviderModel.getAiProviderRuntimeConfig(
-        KeyVaultsGateKeeper.getUserKeyVaults,
-      );
-
-      const enabledAiProviders = await ctx.aiInfraRepos.getUserEnabledProviderList();
-
-      const enabledAiModels = await ctx.aiInfraRepos.getEnabledModels();
-
-      return { enabledAiModels, enabledAiProviders, runtimeConfig };
+      return ctx.aiInfraRepos.getAiProviderRuntimeState(KeyVaultsGateKeeper.getUserKeyVaults);
     }),
 
   removeAiProvider: aiProviderProcedure
@@ -90,7 +83,7 @@ export const aiProviderRouter = router({
     .input(
       z.object({
         id: z.string(),
-        value: CreateAiProviderSchema.partial(),
+        value: UpdateAiProviderSchema,
       }),
     )
     .mutation(async ({ input, ctx }) => {

@@ -64,6 +64,10 @@ export const parseModelString = (modelString: string = '', withDeploymentName = 
 
       for (const capability of capabilityList) {
         switch (capability) {
+          case 'reasoning': {
+            model.abilities!.reasoning = true;
+            break;
+          }
           case 'vision': {
             model.abilities!.vision = true;
             break;
@@ -74,6 +78,14 @@ export const parseModelString = (modelString: string = '', withDeploymentName = 
           }
           case 'file': {
             model.abilities!.files = true;
+            break;
+          }
+          case 'search': {
+            model.abilities!.search = true;
+            break;
+          }
+          case 'imageOutput': {
+            model.abilities!.imageOutput = true;
             break;
           }
           default: {

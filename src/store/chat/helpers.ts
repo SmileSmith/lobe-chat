@@ -1,4 +1,3 @@
-import { LobeAgentChatConfig } from '@/types/agent';
 import { ChatMessage } from '@/types/message';
 import { OpenAIChatMessage } from '@/types/openai/chat';
 import { encodeAsync } from '@/utils/tokenizer';
@@ -9,18 +8,23 @@ export const getMessagesTokenCount = async (messages: OpenAIChatMessage[]) =>
 export const getMessageById = (messages: ChatMessage[], id: string) =>
   messages.find((m) => m.id === id);
 
-const getSlicedMessagesWithConfig = (
+const getSlicedMessages = (
   messages: ChatMessage[],
-  config: LobeAgentChatConfig,
-  includeNewUserMessage?: boolean,
+  options: {
+    enableHistoryCount?: boolean;
+    historyCount?: number;
+    includeNewUserMessage?: boolean;
+  },
 ): ChatMessage[] => {
-  // if historyCount is not enabled or set to 0, return all messages
-  if (!config.enableHistoryCount || !config.historyCount) return messages;
+  // if historyCount is not enabled, return all messages
+  if (!options.enableHistoryCount || options.historyCount === undefined) return messages;
 
   // if user send message, history will include this message so the total length should +1
-  const messagesCount = !!includeNewUserMessage ? config.historyCount + 1 : config.historyCount;
+  const messagesCount = !!options.includeNewUserMessage
+    ? options.historyCount + 1
+    : options.historyCount;
 
-  // if historyCount is negative, return empty array
+  // if historyCount is negative or set to 0, return empty array
   if (messagesCount <= 0) return [];
 
   // if historyCount is positive, return last N messages
@@ -30,5 +34,5 @@ const getSlicedMessagesWithConfig = (
 export const chatHelpers = {
   getMessageById,
   getMessagesTokenCount,
-  getSlicedMessagesWithConfig,
+  getSlicedMessages,
 };

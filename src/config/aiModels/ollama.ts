@@ -3,13 +3,32 @@ import { AIChatModelCard } from '@/types/aiModel';
 const ollamaChatModels: AIChatModelCard[] = [
   {
     abilities: {
+      reasoning: true,
+    },
+    contextWindowTokens: 65_536,
+    description:
+      'DeepSeek-R1 是一款强化学习（RL）驱动的推理模型，解决了模型中的重复性和可读性问题。在 RL 之前，DeepSeek-R1 引入了冷启动数据，进一步优化了推理性能。它在数学、代码和推理任务中与 OpenAI-o1 表现相当，并且通过精心设计的训练方法，提升了整体效果。',
+    displayName: 'DeepSeek R1',
+    enabled: true,
+    id: 'deepseek-r1',
+    type: 'chat',
+  },
+  {
+    contextWindowTokens: 65_536,
+    description:
+      'DeepSeek-V3 是一个强大的专家混合（MoE）语言模型，总参数量为 671B，每个 Token 激活 37B 参数。该模型采用多头潜在注意力（MLA）和 DeepSeekMoE 架构，实现了高效推理和经济训练，并在前代 DeepSeek-V3 的基础上显著提升了性能。',
+    displayName: 'DeepSeek V3 671B',
+    id: 'deepseek-v3',
+    type: 'chat',
+  },
+  {
+    abilities: {
       functionCall: true,
     },
     contextWindowTokens: 128_000,
     description:
       'Llama 3.1 是 Meta 推出的领先模型，支持高达 405B 参数，可应用于复杂对话、多语言翻译和数据分析领域。',
     displayName: 'Llama 3.1 8B',
-    enabled: true,
     id: 'llama3.1',
     type: 'chat',
   },
@@ -34,7 +53,6 @@ const ollamaChatModels: AIChatModelCard[] = [
     description:
       'Code Llama 是一款专注于代码生成和讨论的 LLM，结合广泛的编程语言支持，适用于开发者环境。',
     displayName: 'Code Llama 7B',
-    enabled: true,
     id: 'codellama',
     type: 'chat',
   },
@@ -65,9 +83,11 @@ const ollamaChatModels: AIChatModelCard[] = [
   {
     abilities: {
       functionCall: true,
+      reasoning: true,
     },
     contextWindowTokens: 128_000,
-    description: 'QwQ 是一个实验研究模型，专注于提高 AI 推理能力。',
+    description:
+      'QwQ 是 Qwen 系列的推理模型。与传统的指令调优模型相比，QwQ 具备思考和推理的能力，能够在下游任务中，尤其是困难问题上，显著提升性能。QwQ-32B 是中型推理模型，能够在与最先进的推理模型（如 DeepSeek-R1、o1-mini）竞争时取得可观的表现。',
     displayName: 'QwQ 32B',
     enabled: true,
     id: 'qwq',
@@ -195,7 +215,6 @@ const ollamaChatModels: AIChatModelCard[] = [
     contextWindowTokens: 128_000,
     description: 'Phi-3 是微软推出的轻量级开放模型，适用于高效集成和大规模知识推理。',
     displayName: 'Phi-3 3.8B',
-    enabled: true,
     id: 'phi3',
     type: 'chat',
   },
@@ -211,7 +230,6 @@ const ollamaChatModels: AIChatModelCard[] = [
     description:
       'WizardLM 2 是微软AI提供的语言模型，在复杂对话、多语言、推理和智能助手领域表现尤为出色。',
     displayName: 'WizardLM 2 7B',
-    enabled: true,
     id: 'wizardlm2',
     type: 'chat',
   },
@@ -227,7 +245,6 @@ const ollamaChatModels: AIChatModelCard[] = [
     contextWindowTokens: 32_768,
     description: 'MathΣtral 专为科学研究和数学推理设计，提供有效的计算能力和结果解释。',
     displayName: 'MathΣtral 7B',
-    enabled: true,
     id: 'mathstral',
     type: 'chat',
   },
@@ -238,7 +255,6 @@ const ollamaChatModels: AIChatModelCard[] = [
     contextWindowTokens: 32_768,
     description: 'Mistral 是 Mistral AI 发布的 7B 模型，适合多变的语言处理需求。',
     displayName: 'Mistral 7B',
-    enabled: true,
     id: 'mistral',
     type: 'chat',
   },
@@ -250,7 +266,6 @@ const ollamaChatModels: AIChatModelCard[] = [
     description:
       'Mixtral 是 Mistral AI 的专家模型，具有开源权重，并在代码生成和语言理解方面提供支持。',
     displayName: 'Mixtral 8x7B',
-    enabled: true,
     id: 'mixtral',
     type: 'chat',
   },
@@ -270,7 +285,6 @@ const ollamaChatModels: AIChatModelCard[] = [
     description:
       'Mixtral Large 是 Mistral 的旗舰模型，结合代码生成、数学和推理的能力，支持 128k 上下文窗口。',
     displayName: 'Mixtral Large 123B',
-    enabled: true,
     id: 'mistral-large',
     type: 'chat',
   },
@@ -281,7 +295,6 @@ const ollamaChatModels: AIChatModelCard[] = [
     contextWindowTokens: 128_000,
     description: 'Mistral Nemo 由 Mistral AI 和 NVIDIA 合作推出，是高效性能的 12B 模型。',
     displayName: 'Mixtral Nemo 12B',
-    enabled: true,
     id: 'mistral-nemo',
     type: 'chat',
   },
@@ -289,7 +302,6 @@ const ollamaChatModels: AIChatModelCard[] = [
     contextWindowTokens: 32_768,
     description: 'Codestral 是 Mistral AI 的首款代码模型，为代码生成任务提供优异支持。',
     displayName: 'Codestral 22B',
-    enabled: true,
     id: 'codestral',
     type: 'chat',
   },
@@ -297,7 +309,6 @@ const ollamaChatModels: AIChatModelCard[] = [
     contextWindowTokens: 8192,
     description: 'Aya 23 是 Cohere 推出的多语言模型，支持 23 种语言，为多元化语言应用提供便利。',
     displayName: 'Aya 23 8B',
-    enabled: true,
     id: 'aya',
     type: 'chat',
   },
@@ -315,7 +326,6 @@ const ollamaChatModels: AIChatModelCard[] = [
     contextWindowTokens: 131_072,
     description: 'Command R 是优化用于对话和长上下文任务的LLM，特别适合动态交互与知识管理。',
     displayName: 'Command R 35B',
-    enabled: true,
     id: 'command-r',
     type: 'chat',
   },
@@ -326,7 +336,6 @@ const ollamaChatModels: AIChatModelCard[] = [
     contextWindowTokens: 131_072,
     description: 'Command R+ 是一款高性能的大型语言模型，专为真实企业场景和复杂应用而设计。',
     displayName: 'Command R+ 104B',
-    enabled: true,
     id: 'command-r-plus',
     type: 'chat',
   },
@@ -334,7 +343,6 @@ const ollamaChatModels: AIChatModelCard[] = [
     contextWindowTokens: 32_768,
     description: 'DeepSeek V2 是高效的 Mixture-of-Experts 语言模型，适用于经济高效的处理需求。',
     displayName: 'DeepSeek V2 16B',
-    enabled: true,
     id: 'deepseek-v2',
     type: 'chat',
   },
@@ -350,7 +358,6 @@ const ollamaChatModels: AIChatModelCard[] = [
     description:
       'DeepSeek Coder V2 是开源的混合专家代码模型，在代码任务方面表现优异，与 GPT4-Turbo 相媲美。',
     displayName: 'DeepSeek Coder V2 16B',
-    enabled: true,
     id: 'deepseek-coder-v2',
     type: 'chat',
   },
@@ -369,7 +376,6 @@ const ollamaChatModels: AIChatModelCard[] = [
     contextWindowTokens: 4096,
     description: 'LLaVA 是结合视觉编码器和 Vicuna 的多模态模型，用于强大的视觉和语言理解。',
     displayName: 'LLaVA 7B',
-    enabled: true,
     id: 'llava',
     type: 'chat',
   },
@@ -401,7 +407,6 @@ const ollamaChatModels: AIChatModelCard[] = [
     description:
       'MiniCPM-V 是 OpenBMB 推出的新一代多模态大模型，具备卓越的 OCR 识别和多模态理解能力，支持广泛的应用场景。',
     displayName: 'MiniCPM-V 8B',
-    enabled: true,
     id: 'minicpm-v',
     type: 'chat',
   },
